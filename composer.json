@@ -1,4 +1,9 @@
 {
+    "config": {
+        "platform": {
+            "php": "7.0"
+        }
+    },
     "require": {
         "jupitern/cosmosdb": "^2.5"
     }
