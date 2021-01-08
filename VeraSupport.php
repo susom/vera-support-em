@@ -20,9 +20,11 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
     private ?string $partition;
     private ?string $surveyInstrument;
     private ?string $phoneInstrument;
-    private ?string $db;
-    private ?bool   $forceUpdateField;
+    private $db;
+    private $forceUpdateField;
     private ?string $recordId;
+    private ?string $profileEmailField;
+    private ?string $profileEmail;
 
     public function __construct() {
 		parent::__construct();
@@ -41,6 +43,7 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
         $this->surveyInstrument = $this->getProjectSetting('survey-instrument');
         $this->phoneInstrument = $this->getProjectSetting('phone-instrument');
         $this->forceUpdateField = $this->getProjectSetting('force-update-checkbox');
+        $this->profileEmailField = $this->getProjectSetting('profile-email-field');
     }
 
 
@@ -76,6 +79,12 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
         if (!empty($participantId) && ( empty($record[$this->profileSummaryField]) || $forceUpdate) ) {
             // Try to look up the user
             $record[$this->profileSummaryField] = $this->lookupParticipantById($participantId);
+
+            // Set profile email if found and defined
+            if (!empty($this->profileEmail) && !empty($this->profileEmailField)) {
+                $record[$this->profileEmailField] = $this->profileEmail;
+            }
+
             $doUpdate = true;
         }
 
@@ -112,6 +121,10 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
             ->params(['@id' => $id])
             ->find(false)
             ->toArray();
+
+        // Save the profile email
+        if (!empty($this->profileEmailField) && !empty($res->email)) $this->profileEmail = $res->email;
+
         return empty($res) ? "Unable to find participant profile" : $this->arrayToTable($res);
     }
 
@@ -153,7 +166,11 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
                 ["<tr><th>#</th><th>executingTransition</th><th>state</th><th>enteredOn</th><th $ar>PST</th></tr>"],
                 array_reverse($rows)
             );
-            $result = "<table style='width:100%; font-weight:normal;'>" . implode("", $rows) . "</table>";
+            $result = "<div style='position:relative;'>" .
+                "<div style='height:200px;overflow:auto;'>" .
+                    "<table style='width:100%; font-weight:normal;'>" . implode("", $rows) . "</table>" .
+                "</div>" .
+            "</div>";
         } else {
             $result = "Unable to find workflow state history";
         }

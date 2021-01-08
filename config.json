@@ -70,6 +70,12 @@
             "type": "field-list"
         },
         {
+            "key": "profile-email-field",
+            "name": "<b>Profile Email Field</b><br>If specified, the email from the profile will be stored here",
+            "required": false,
+            "type": "field-list"
+        },
+        {
             "key": "workflow-collection",
             "name": "<b>Cosmos Workflow Collection</b>",
             "required": true,
