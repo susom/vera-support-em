@@ -10,20 +10,19 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
 
     use emLoggerTrait;
 
-    /**
-     * @var mixed|null
-     */
-    private $host;
-    private $privateKey;
-    private $database;
-    private $profileCollection;
-    private $workflowCollection;
-    private $partition;
-    private $surveyInstrument;
-    private $phoneInstrument;
-    private $db;
-
-    private $recordId;
+    private ?string $host;
+    private ?string $privateKey;
+    private ?string $database;
+    private ?string $profileCollection;
+    private ?string $profileSummaryField;
+    private ?string $workflowCollection;
+    private ?string $workflowSummaryField;
+    private ?string $partition;
+    private ?string $surveyInstrument;
+    private ?string $phoneInstrument;
+    private ?string $db;
+    private ?bool   $forceUpdateField;
+    private ?string $recordId;
 
     public function __construct() {
 		parent::__construct();
@@ -35,10 +34,13 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
         $this->privateKey = $this->getProjectSetting('private-key');
         $this->database = $this->getProjectSetting('database');
         $this->profileCollection = $this->getProjectSetting('profile-collection');
+        $this->profileSummaryField = $this->getProjectSetting('profile-summary-field');
         $this->workflowCollection = $this->getProjectSetting('workflow-collection');
+        $this->workflowSummaryField = $this->getProjectSetting('workflow-summary-field');
         $this->partition = $this->getProjectSetting('partition');
         $this->surveyInstrument = $this->getProjectSetting('survey-instrument');
         $this->phoneInstrument = $this->getProjectSetting('phone-instrument');
+        $this->forceUpdateField = $this->getProjectSetting('force-update-checkbox');
     }
 
 
@@ -53,61 +55,42 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
             'return_format' => 'json',
             'records' => [$record]
         ];
-
         $q = REDCap::getData($params);
+
         $results = json_decode($q,true);
         if (!empty($results[0])) $this->updateParticipant($results[0]);
-        // $this->emDebug($results);
-
-
-
     }
 
     public function updateParticipant($record) {
-        $this->emDebug('Updating participant');
-
         $participantId = $record['participant_id'];
-        $email         = $record['email'];
-        $firstName     = $record['first_name'];
-        $lastName      = $record['last_name'];
+        $forceUpdate = isset($record[$this->forceUpdateField . '___1']) && $record[$this->forceUpdateField . '___1'] == 1;
 
-        $participantLookupResults = $record['participant_lookup_results'];
+        $this->emDebug("Updating participant $participantId", $forceUpdate);
+        // $email         = $record['email'];
+        // $firstName     = $record['first_name'];
+        // $lastName      = $record['last_name'];
 
         $doUpdate = false;
 
         // Look for Participant Details
-        if (!empty($participantId) && empty($record['participant_lookup_results'])) {
+        if (!empty($participantId) && ( empty($record[$this->profileSummaryField]) || $forceUpdate) ) {
             // Try to look up the user
-            $detail = $this->lookupParticipantById($participantId);
-            $this->emDebug($detail);
-
-            if (empty($detail)) {
-                // Try to lookup user by email
-                // $detail = $this->lookupParticipantByEmail($email);
-                // $this->emDebug($detail);
-                $record['participant_lookup_results'] = "Unable to find participant";
-            } else {
-                // Save the results
-                $record['participant_lookup_results'] = $detail;
-            }
+            $record[$this->profileSummaryField] = $this->lookupParticipantById($participantId);
             $doUpdate = true;
         }
 
         // Get Workflow History
-        if (!empty($participantId) && empty($record['workflow_history_summary']) && !empty($record['participant_lookup_results'])) {
+        if (!empty($participantId) && ( empty($record[$this->workflowSummaryField]) || $forceUpdate) ){
             // Try to lookup workflow history
             $detail = $this->lookupWorkflowHistory($participantId);
-            $this->emDebug($detail);
-            if (empty($detail)) {
-                // Didn't work
-                // $record['workflow_history_summary'] = "";
-            } else {
-                $record['workflow_history_summary'] = $detail;
-                $doUpdate = true;
-            }
+            // $this->emDebug($detail);
+
+            $record[$this->workflowSummaryField] = empty($detail) ? "Unable to find workflow history" : $detail;
+            $doUpdate = true;
         }
 
         if ($doUpdate) {
+            if ($forceUpdate) $record[$this->forceUpdateField . '___1'] = 0;
             $q = REDCap::saveData('json', json_encode(array($record)));
             $this->emDebug($q);
         }
@@ -129,12 +112,8 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
             ->params(['@id' => $id])
             ->find(false)
             ->toArray();
-        // $this->emDebug($res);
-        array_filter($res);
-        // $this->emDebug($res);
-        return $this->arrayToTable($res);
+        return empty($res) ? "Unable to find participant profile" : $this->arrayToTable($res);
     }
-
 
     private function lookupWorkflowHistory($participantId) {
         // Start with participantId
@@ -154,58 +133,32 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
         if (!empty($res)) {
             $states = $res->stateAuditHistory;
             array_push($states, $res->currentState);
-            // $this->emDebug('AFTER', $states);
+
+            // Build array of workflowHistory
+            $rows = [];
+            $ar = "style='text-align:right; padding-left: 5px;'";
+            foreach ($states as $i => $state) {
+                // $enteredOn = left($state->enteredOn,19);
+                $enteredOn = $state->enteredOn;
+                $date = new \DateTime($enteredOn);
+                $enteredOn = $date->format("m/d/y H:i:s");
+                $enteredOnPst = $date->setTimezone( new \DateTimeZone ('America/Los_Angeles'))->format('D H:i:s');
+                $rows[]= "<tr><td>" . ($i+1) . "</td>" .
+                    "<td>" . $state->executingTransition . "</td>" .
+                    "<td>" . $state->state . "</td>" .
+                    "<td>" . $enteredOn . "</td>" .
+                    "<td $ar>" . $enteredOnPst . "</td></tr>";
+            }
+            $rows = array_merge(
+                ["<tr><th>#</th><th>executingTransition</th><th>state</th><th>enteredOn</th><th $ar>PST</th></tr>"],
+                array_reverse($rows)
+            );
+            $result = "<table style='width:100%; font-weight:normal;'>" . implode("", $rows) . "</table>";
+        } else {
+            $result = "Unable to find workflow state history";
         }
-        $rows = [];
-        $ar = "style='text-align:right; padding-left: 5px;'";
-        foreach ($states as $i => $state) {
-            // $enteredOn = left($state->enteredOn,19);
-            $enteredOn = $state->enteredOn;
-            $date = new \DateTime($enteredOn);
-            $enteredOn = $date->format("m/d/y H:i:s");
-            $enteredOnPst = $date->setTimezone( new \DateTimeZone ('America/Los_Angeles'))->format('D H:i:s');
-            $rows[]= "<tr><td>" . ($i+1) . "</td>" .
-                "<td>" . $state->executingTransition . "</td>" .
-                "<td>" . $state->state . "</td>" .
-                "<td>" . $enteredOn . "</td>" .
-                "<td $ar>" . $enteredOnPst . "</td></tr>";
-        }
-
-        $rows = array_merge(
-            ["<tr><th>#</th><th>executingTransition</th><th>state</th><th>enteredOn</th><th $ar>PST</th></tr>"],
-            array_reverse($rows)
-        );
-
-        return empty($states) ? null : "<table style='width:100%; font-weight:normal;'>" . implode("", $rows) . "</table>";
+        return $result;
     }
-
-
-    // NOT WORKING...
-    private function lookupParticipantByEmail($email) {
-        $this->emDebug("Looking up $email");
-
-        // Start with participantId
-        $id = $email;
-        $this->initDb();
-        $collection = $this->db->selectCollection($this->profileCollection);
-        $res = \Jupitern\CosmosDb\QueryBuilder::instance()
-            ->setCollection($collection)
-            // ->setPartitionKey([2])
-            // ->setPartitionValue(3)
-            ->select("*")
-            ->where("c.email = @email")
-            ->params(['@email' => $email])
-            // ->find(true)
-            ->findAll(false) # pass true if is cross partition query
-            ->toArray();
-        $this->emDebug($res);
-        array_filter($res);
-        $this->emDebug($res);
-        return $this->arrayToTable($res);
-    }
-
-
-
 
     private function arrayToTable($arr) {
         $rows = [];
@@ -217,7 +170,6 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
         }
         return empty($rows) ? null : "<table style='width:100%; font-weight:normal;'>".implode("",$rows)."</table>";
     }
-
 
     private function initDb() {
         if (empty($this->db)) {

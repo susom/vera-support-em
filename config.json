@@ -64,10 +64,28 @@
             "type": "text"
         },
         {
+            "key": "profile-summary-field",
+            "name": "<b>Profile Summary Field</b><br>This is where the html summary will be stored",
+            "required": true,
+            "type": "field-list"
+        },
+        {
             "key": "workflow-collection",
             "name": "<b>Cosmos Workflow Collection</b>",
             "required": true,
             "type": "text"
+        },
+        {
+            "key": "workflow-summary-field",
+            "name": "<b>Workflow Summary Field</b><br>This is where the html summary will be stored",
+            "required": true,
+            "type": "field-list"
+        },
+        {
+            "key": "force-update-checkbox",
+            "name": "<b>Force Update if Checked Field</b><br>Identify a checkbox field here (with value 1) and if checked and saved, a record will update profile and workflow history",
+            "required": true,
+            "type": "field-list"
         },
         {
             "key": "partition",
@@ -75,12 +93,6 @@
             "required": true,
             "type": "text"
         },
-		{
-			"key": "enable-project-debug-logging",
-			"name": "<b>Enable Debug Logging</b><br><i>(optional)</i> Requires installation and configuration of emLogger",
-			"required": false,
-			"type": "checkbox"
-		},
         {
             "key": "survey-instrument",
             "name": "<b>Survey Instrument</b>",
@@ -92,8 +104,13 @@
             "name": "<b>Phone Instrument</b>",
             "required": false,
             "type": "form-list"
+        },
+        {
+            "key": "enable-project-debug-logging",
+            "name": "<b>Enable Debug Logging</b><br><i>(optional)</i> Requires installation and configuration of emLogger",
+            "required": false,
+            "type": "checkbox"
         }
-
     ],
 
 
