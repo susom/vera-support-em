@@ -1,0 +1,5 @@
+{
+    "require": {
+        "jupitern/cosmosdb": "^2.5"
+    }
+}
