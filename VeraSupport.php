@@ -10,21 +10,21 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
 
     use emLoggerTrait;
 
-    private ?string $host;
-    private ?string $privateKey;
-    private ?string $database;
-    private ?string $profileCollection;
-    private ?string $profileSummaryField;
-    private ?string $workflowCollection;
-    private ?string $workflowSummaryField;
-    private ?string $partition;
-    private ?string $surveyInstrument;
-    private ?string $phoneInstrument;
+    private $host;
+    private $privateKey;
+    private $database;
+    private $profileCollection;
+    private $profileSummaryField;
+    private $workflowCollection;
+    private $workflowSummaryField;
+    private $partition;
+    private $surveyInstrument;
+    private $phoneInstrument;
     private $db;
     private $forceUpdateField;
-    private ?string $recordId;
-    private ?string $profileEmailField;
-    private ?string $profileEmail;
+    private $recordId;
+    private $profileEmailField;
+    private $profileEmail;
 
     public function __construct() {
 		parent::__construct();
