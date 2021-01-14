@@ -25,6 +25,7 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
     private $recordId;
     private $profileEmailField;
     private $profileEmail;
+    private $userIdField;
 
     public function __construct() {
 		parent::__construct();
@@ -44,6 +45,7 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
         $this->phoneInstrument = $this->getProjectSetting('phone-instrument');
         $this->forceUpdateField = $this->getProjectSetting('force-update-checkbox');
         $this->profileEmailField = $this->getProjectSetting('profile-email-field');
+        $this->userIdField = $this->getProjectSetting('user-id-field');
     }
 
 
@@ -65,7 +67,7 @@ class VeraSupport extends \ExternalModules\AbstractExternalModule {
     }
 
     public function updateParticipant($record) {
-        $participantId = $record['participant_id'];
+        $participantId = $record[$this->userIdField];
         $forceUpdate = isset($record[$this->forceUpdateField . '___1']) && $record[$this->forceUpdateField . '___1'] == 1;
 
         $this->emDebug("Updating participant $participantId", $forceUpdate);

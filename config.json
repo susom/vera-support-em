@@ -64,6 +64,12 @@
             "type": "text"
         },
         {
+            "key": "user-id-field",
+            "name": "<b>User ID Field</b><br>This is the field containing the participant's user_id",
+            "required": true,
+            "type": "field-list"
+        },
+        {
             "key": "profile-summary-field",
             "name": "<b>Profile Summary Field</b><br>This is where the html summary will be stored",
             "required": true,
